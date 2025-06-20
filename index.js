@@ -1,3 +1,4 @@
+// index.js
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -6,18 +7,28 @@ const { Pool } = require('pg');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Konfiguracja połączenia z PostgreSQL
-const pool = new Pool({
-  host: process.env.PGHOST,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
-  port: process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 5432,
-  // SSL, jeśli potrzebne:
-  // ssl: process.env.PGSSLMODE && process.env.PGSSLMODE !== 'disable'
-  //   ? { rejectUnauthorized: false }
-  //   : false,
-});
+// Konfiguracja połączenia z PostgreSQL:
+// Jeśli jest DATABASE_URL, użyj connectionString:
+const poolConfig = {};
+if (process.env.DATABASE_URL) {
+  poolConfig.connectionString = process.env.DATABASE_URL;
+  // Jeśli potrzebujesz SSL i URL nie zawiera parametrów, można dodać:
+  if (process.env.PGSSLMODE && process.env.PGSSLMODE !== 'disable') {
+    poolConfig.ssl = { rejectUnauthorized: false };
+  }
+} else {
+  // użyj osobnych zmiennych
+  poolConfig.host = process.env.PGHOST;
+  poolConfig.user = process.env.PGUSER;
+  poolConfig.password = process.env.PGPASSWORD;
+  poolConfig.database = process.env.PGDATABASE;
+  poolConfig.port = process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 5432;
+  if (process.env.PGSSLMODE && process.env.PGSSLMODE !== 'disable') {
+    poolConfig.ssl = { rejectUnauthorized: false };
+  }
+}
+
+const pool = new Pool(poolConfig);
 
 // Inicjalizacja DB: tworzenie tabeli, jeśli nie istnieje
 async function initDb() {
